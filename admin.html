@@ -12,7 +12,7 @@
 </head>
 <body>
     <div class="app-container no-print">
-        <main class="main-content" style="overflow-y: auto; display: block; padding: 10px 40px 40px;">
+        <main class="main-content" style="overflow-y: auto; display: block;">
             <div class="top-actions" style="margin-bottom: 24px;">
                 <button onclick="window.location.href='index.html'" class="btn btn-secondary" style="display: flex; align-items: center; gap: 8px;">
                     <i class='bx bx-arrow-back'></i> <span data-i18n="nav_dashboard">Dashboard</span>
@@ -49,7 +49,7 @@
                 <p data-i18n="admin_desc">Manage your inventory items.</p>
             </header>
 
-            <div class="dashboard-stats" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px;">
+            <div class="dashboard-stats">
                 <div class="stat-card" style="background: var(--info-gradient); padding: 20px; border-radius: 12px; display: flex; flex-direction: column; gap: 8px; color: white; box-shadow: 0 4px 15px rgba(14, 165, 233, 0.3); border: none;">
                     <h3 data-i18n="stat_items" style="margin: 0; font-size: 0.9rem; color: rgba(255,255,255,0.8);">Total Items</h3>
                     <p id="admin-stat-items" class="stat-value" style="margin: 0; font-size: 1.8rem; font-weight: 700;">0</p>
@@ -68,7 +68,7 @@
                 </div>
             </div>
 
-            <div class="admin-grid" style="display: grid; grid-template-columns: 1fr 2fr; gap: 24px; align-items: start;">
+            <div class="admin-grid">
                 <!-- Add Item Form -->
                 <div class="glass-panel">
                     <h2 data-i18n="admin_add_new" style="margin-bottom: 16px;">Add New Item</h2>
