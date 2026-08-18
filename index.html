@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StockMaster</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
+</head>
+
+<body>
+    <div class="app-container no-print">
+        <main class="main-content">
+            <div class="top-actions">
+                <a href="StockMaster_App.zip" download class="theme-btn" style="text-decoration: none;"
+                    aria-label="Download App" title="Download App">
+                    <i class='bx bx-download'></i>
+                </a>
+
+                <h2
+                    style="position: absolute; left: 50%; transform: translateX(-50%); margin: 0; font-size: 32px; font-weight: 800; background: var(--accent-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; white-space: nowrap; pointer-events: none;">
+                    Abdul Samad Quraishi
+                </h2>
+
+                <div style="display: flex; gap: 10px; margin-left: auto;">
+                    <button onclick="window.location.href='invoices.html'" class="btn btn-secondary"
+                        style="display: flex; align-items: center; gap: 8px;">
+                        <i class='bx bx-receipt'></i> <span data-i18n="nav_invoices">Invoices</span>
+                    </button>
+                    <button id="lang-toggle" class="lang-btn" aria-label="Toggle Language">اردو</button>
+                    <button id="theme-toggle" class="theme-btn" aria-label="Toggle Theme"><i
+                            class='bx bx-sun'></i></button>
+                </div>
+            </div>
+
+            <div class="split-layout">
+                <div class="left-column">
+                    <!-- Recent Invoice Container (shown for 15 mins after transaction) -->
+                    <div id="recent-invoice-container"
+                        style="display: none; margin-bottom: 24px; animation: slideDown 0.3s ease-out;"></div>
+
+                    <section id="stock" class="dashboard-section mb-4">
+                        <div class="glass-panel form-container">
+                            <form id="stock-form">
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="transaction-type" data-i18n="label_tx_type">Transaction Type</label>
+                                        <select id="transaction-type" required>
+                                            <option value="in" data-i18n="opt_in">Stock In (Purchase)</option>
+                                            <option value="out" data-i18n="opt_out">Stock Out (Sale)</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="person-name" data-i18n="label_person">Person Name</label>
+                                        <input type="text" id="person-name" list="person-name-list" required
+                                            placeholder="Enter or select a person..."
+                                            data-i18n-placeholder="placeholder_person" autocomplete="off">
+                                        <datalist id="person-name-list"></datalist>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="stock-item" data-i18n="label_item">Item</label>
+                                        <input type="text" id="stock-item" list="stock-item-list" required
+                                            placeholder="Select or type an item..."
+                                            data-i18n-placeholder="opt_select_item" autocomplete="off">
+                                        <datalist id="stock-item-list"></datalist>
+                                        <div id="current-stock-display" class="stock-display-box"
+                                            style="display: none;">
+                                            <span data-i18n="curr_stock" class="label">Current Stock:</span>
+                                            <span id="current-stock-val" class="value">0</span>
+                                            <small id="current-stock-unit" class="unit">(Kg)</small>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="item-summary mt-2"
+                                    style="margin-bottom: 24px; padding: 16px; background: rgba(0,0,0,0.05); border-radius: 12px; border: 1px dashed var(--border);">
+                                    <h2 data-i18n="dash_item_summary" style="font-size: 1.1rem; margin-bottom: 12px;">
+                                        Item Stock Summary</h2>
+                                    <div class="table-container" style="max-height: 250px;">
+                                        <table id="item-summary-table">
+                                            <thead>
+                                                <tr>
+                                                    <th data-i18n="th_item">Item</th>
+                                                    <th data-i18n="th_stock_in">Stock In</th>
+                                                    <th data-i18n="th_stock_out">Stock Out</th>
+                                                    <th data-i18n="th_current_stock">Current Stock</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+
+                                <div class="form-section-title" data-i18n="sec_measurement">Measurement Record</div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="transaction-qty" data-i18n="label_qty">Quantity</label>
+                                        <input type="text" inputmode="decimal" id="transaction-qty" value="0" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="transaction-unit" data-i18n="label_unit">Unit</label>
+                                        <select id="transaction-unit" required>
+                                            <option value="kg" selected data-i18n="opt_kg">Kg</option>
+                                            <option value="mun" data-i18n="opt_mun">Mun (40kg = 1 Mun)</option>
+                                            <option value="gram" data-i18n="opt_gram">Grams</option>
+                                            <option value="ltr" data-i18n="opt_ltr">Liters</option>
+                                            <option value="ml" data-i18n="opt_ml">Milliliters</option>
+                                            <option value="amount" data-i18n="opt_amount">Pcs</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="calc-result"><span data-i18n="calc_total">Total Quantity:</span> <span
+                                        id="calc-total-kg">0.00</span> <span id="calc-unit-suffix">(Kg)</span></div>
+
+                                <div class="form-section-title" data-i18n="sec_financials">Financials</div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="rate-per-kg"><span data-i18n="label_rate_base">Rate</span> <span
+                                                id="rate-unit-suffix">(Per Kg)</span></label>
+                                        <input type="text" inputmode="decimal" id="rate-per-kg" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="total-amount" data-i18n="label_total_amt">Total Amount</label>
+                                        <input type="number" id="total-amount" readonly class="readonly-input">
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="amount-paid" data-i18n="label_paid">Amount Paid</label>
+                                        <input type="text" inputmode="decimal" id="amount-paid" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="amount-remaining" data-i18n="label_rem_bal">Remaining
+                                            Balance</label>
+                                        <input type="number" id="amount-remaining" readonly
+                                            class="readonly-input alert-text">
+                                    </div>
+                                </div>
+
+                                <div class="form-actions">
+                                    <button type="submit" class="btn btn-primary" data-i18n="btn_save_tx">Save
+                                        Transaction</button>
+                                </div>
+                            </form>
+                        </div>
+                    </section>
+
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="translations.js"></script>
+    <script src="store.js"></script>
+    <script src="app.js"></script>
+    <script src="stock.js"></script>
+    <script src="admin.js"></script>
+</body>
+
+</html>

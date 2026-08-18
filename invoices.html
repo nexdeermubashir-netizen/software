@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invoices - StockMaster</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container no-print">
+        <main class="main-content" style="overflow-y: auto; display: block; padding: 10px 40px 40px;">
+            <div class="top-actions" style="margin-bottom: 24px;">
+                <button onclick="window.location.href='index.html'" class="btn btn-secondary" style="display: flex; align-items: center; gap: 8px;">
+                    <i class='bx bx-arrow-back'></i> <span data-i18n="nav_dashboard">Dashboard</span>
+                </button>
+                
+                <div style="margin-left: auto; display: flex; gap: 10px;">
+                    <button id="lang-toggle" class="lang-btn" aria-label="Toggle Language">اردو</button>
+                    <button id="theme-toggle" class="theme-btn" aria-label="Toggle Theme"><i class='bx bx-sun'></i></button>
+                </div>
+            </div>
+
+            <header class="page-header">
+                <h1 data-i18n="nav_invoices">Invoices</h1>
+                <p data-i18n="inv_desc">View past transactions and print invoices.</p>
+            </header>
+
+            <!-- Invoices Section -->
+            <div class="glass-panel mt-4" style="margin-top: 24px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
+                    <h2 data-i18n="nav_invoices">Invoices</h2>
+                    <input type="text" id="admin-invoice-search" placeholder="Search Invoice by Person Name or TXN ID..." style="width: 100%; max-width: 400px; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-main); color: var(--text-primary);">
+                </div>
+                <div class="table-container" style="max-height: calc(100vh - 300px);">
+                    <table id="invoices-table">
+                        <thead>
+                            <tr>
+                                <th data-i18n="th_person">Person Name</th>
+                                <th data-i18n="th_date">Date</th>
+                                <th data-i18n="th_type">Type</th>
+                                <th data-i18n="th_item">Item</th>
+                                <th data-i18n="th_total_amt">Total Amt</th>
+                                <th data-i18n="th_remaining">Remaining</th>
+                                <th data-i18n="th_actions">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Print Template -->
+    <div id="print-area" class="print-only">
+        <div class="invoice-header">
+            <h2 id="print-title">INVOICE</h2>
+            <p id="print-company">StockMaster Systems</p>
+            <p id="invoice-date"></p>
+            <p id="invoice-person"></p>
+            <p><strong id="label-type"></strong> <span id="invoice-type"></span></p>
+            <p><strong id="label-item"></strong> <span id="invoice-item"></span></p>
+        </div>
+        <table class="print-table">
+            <thead>
+                <tr>
+                    <th id="th-desc">Description</th>
+                    <th id="th-weight">Weight</th>
+                    <th id="th-rate">Rate/Unit</th>
+                    <th id="th-total">Total</th>
+                </tr>
+            </thead>
+            <tbody id="print-body">
+                <tr>
+                    <td id="td-desc">Stock Record</td>
+                    <td>
+                        <div id="invoice-weight-text"></div>
+                        <div style="font-size: 0.8em; color: #555;">(<span id="invoice-kg-total"></span> <span id="label-kg"></span>)</div>
+                    </td>
+                    <td id="invoice-rate"></td>
+                    <td id="invoice-total"></td>
+                </tr>
+            </tbody>
+        </table>
+        <div class="print-footer-info">
+            <p><span id="label-paid-print"></span> <strong id="invoice-paid"></strong></p>
+            <p><span id="label-rem-print"></span> <strong id="invoice-remaining"></strong></p>
+        </div>
+        <div class="invoice-footer">
+            <p id="print-footer"></p>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="translations.js"></script>
+    <script>
+        // Provide mock functions for app.js so it doesn't crash on this page
+        window.populateStockItemSelect = () => {};
+        window.renderInvoices = () => {};
+        window.updateDashboard = () => {};
+        window.populateDashboardDatalists = () => {};
+    </script>
+    <script src="store.js"></script>
+    <script src="app.js"></script>
+    <script src="stock.js"></script> 
+    <script src="invoice.js"></script> 
+    <script src="admin.js"></script>
+</body>
+</html>

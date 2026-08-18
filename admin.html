@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Items - StockMaster</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container no-print">
+        <main class="main-content" style="overflow-y: auto; display: block; padding: 10px 40px 40px;">
+            <div class="top-actions" style="margin-bottom: 24px;">
+                <button onclick="window.location.href='index.html'" class="btn btn-secondary" style="display: flex; align-items: center; gap: 8px;">
+                    <i class='bx bx-arrow-back'></i> <span data-i18n="nav_dashboard">Dashboard</span>
+                </button>
+                <div style="margin-left: auto; display: flex; gap: 10px;">
+                    <button onclick="window.location.href='invoices.html'" class="btn btn-secondary" style="display: flex; align-items: center; gap: 8px;">
+                        <i class='bx bx-receipt'></i> <span data-i18n="nav_invoices">Invoices</span>
+                    </button>
+                    <button id="lang-toggle" class="lang-btn" aria-label="Toggle Language">اردو</button>
+                    <button id="theme-toggle" class="theme-btn" aria-label="Toggle Theme"><i class='bx bx-sun'></i></button>
+                </div>
+            </div>
+
+            <div id="admin-login-section" class="glass-panel" style="max-width: 400px; margin: 60px auto; padding: 40px; text-align: center;">
+                <h2>Admin Login</h2>
+                <p style="color: var(--text-secondary); margin-bottom: 24px; font-size: 14px;">Please authenticate to access the admin panel.</p>
+                <form id="admin-login-form" style="text-align: left;">
+                    <div class="form-group" style="margin-bottom: 16px;">
+                        <label>Email</label>
+                        <input type="email" id="login-email" required placeholder="Enter admin email">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 24px;">
+                        <label>Password</label>
+                        <input type="password" id="login-password" required placeholder="Enter password">
+                    </div>
+                    <p id="login-error" class="alert-text" style="display: none; margin-bottom: 16px; font-size: 14px; text-align: center;">Invalid email or password.</p>
+                    <button type="submit" class="btn btn-primary" style="width: 100%;">Login</button>
+                </form>
+            </div>
+
+            <div id="admin-main-content" style="display: none;">
+                <header class="page-header">
+                    <h1 data-i18n="admin_title">Admin Panel</h1>
+                <p data-i18n="admin_desc">Manage your inventory items.</p>
+            </header>
+
+            <div class="dashboard-stats" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px;">
+                <div class="stat-card" style="background: var(--info-gradient); padding: 20px; border-radius: 12px; display: flex; flex-direction: column; gap: 8px; color: white; box-shadow: 0 4px 15px rgba(14, 165, 233, 0.3); border: none;">
+                    <h3 data-i18n="stat_items" style="margin: 0; font-size: 0.9rem; color: rgba(255,255,255,0.8);">Total Items</h3>
+                    <p id="admin-stat-items" class="stat-value" style="margin: 0; font-size: 1.8rem; font-weight: 700;">0</p>
+                </div>
+                <div class="stat-card" style="background: var(--success-gradient); padding: 20px; border-radius: 12px; display: flex; flex-direction: column; gap: 8px; color: white; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3); border: none;">
+                    <h3 data-i18n="stat_in" style="margin: 0; font-size: 0.9rem; color: rgba(255,255,255,0.8);">Total Stock In (Kg)</h3>
+                    <p id="admin-stat-in" class="stat-value" style="margin: 0; font-size: 1.8rem; font-weight: 700;">0.00</p>
+                </div>
+                <div class="stat-card" style="background: var(--alert-gradient); padding: 20px; border-radius: 12px; display: flex; flex-direction: column; gap: 8px; color: white; box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3); border: none;">
+                    <h3 data-i18n="stat_out" style="margin: 0; font-size: 0.9rem; color: rgba(255,255,255,0.8);">Total Stock Out (Kg)</h3>
+                    <p id="admin-stat-out" class="stat-value" style="margin: 0; font-size: 1.8rem; font-weight: 700;">0.00</p>
+                </div>
+                <div class="stat-card" style="background: var(--warning-gradient); padding: 20px; border-radius: 12px; display: flex; flex-direction: column; gap: 8px; color: white; box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3); border: none;">
+                    <h3 data-i18n="stat_rem" style="margin: 0; font-size: 0.9rem; color: rgba(255,255,255,0.8);">Total Remaining Payments</h3>
+                    <p id="admin-stat-rem" class="stat-value" style="margin: 0; font-size: 1.8rem; font-weight: 700;">0.00</p>
+                </div>
+            </div>
+
+            <div class="admin-grid" style="display: grid; grid-template-columns: 1fr 2fr; gap: 24px; align-items: start;">
+                <!-- Add Item Form -->
+                <div class="glass-panel">
+                    <h2 data-i18n="admin_add_new" style="margin-bottom: 16px;">Add New Item</h2>
+                    <form id="add-item-form">
+                        <div class="form-group">
+                            <label for="item-name" data-i18n="label_item_name">Item Name</label>
+                            <input type="text" id="item-name" required placeholder="e.g. Rice, Wheat..." data-i18n-placeholder="placeholder_item">
+                        </div>
+                        <button type="submit" class="btn btn-primary mt-1" style="width: 100%; margin-top: 16px;" data-i18n="btn_add_item">Add Item</button>
+                    </form>
+                </div>
+
+                <!-- Items Table -->
+                <div class="glass-panel">
+                    <h2 data-i18n="admin_item_list" style="margin-bottom: 16px;">Item List</h2>
+                    <div class="table-container" style="max-height: calc(100vh - 200px);">
+                        <table id="items-table">
+                            <thead>
+                                <tr>
+                                    <th data-i18n="label_item_name">Item Name</th>
+                                    <th data-i18n="th_stock_in">Stock In</th>
+                                    <th data-i18n="th_stock_out">Stock Out</th>
+                                    <th data-i18n="th_current_stock">Current Stock</th>
+                                    <th data-i18n="th_action" style="width: 100px;">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Items loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+
+            </div>
+        </main>
+    </div>
+
+    <!-- Print Template -->
+    <div id="print-area" class="print-only">
+        <div class="invoice-header">
+            <h2 id="print-title" data-i18n="print_invoice">INVOICE</h2>
+            <p id="print-company" data-i18n="print_company">StockMaster Systems</p>
+            <p id="invoice-date"><span data-i18n="print_date">Date: </span><span id="date-val"></span></p>
+            <p id="invoice-person"><span data-i18n="print_person">Person: </span><span id="person-val"></span></p>
+        </div>
+        <table class="print-table">
+            <thead>
+                <tr>
+                    <th data-i18n="print_desc">Description</th>
+                    <th data-i18n="print_meas">Measurement</th>
+                    <th data-i18n="print_rate">Rate/Unit</th>
+                    <th data-i18n="print_total">Total</th>
+                </tr>
+            </thead>
+            <tbody id="print-body"></tbody>
+        </table>
+        <div class="print-footer-info">
+            <p><span data-i18n="print_paid">Paid:</span> <span id="print-paid-val"></span></p>
+            <p><span data-i18n="print_rem">Remaining:</span> <span id="print-rem-val"></span></p>
+        </div>
+        <div class="invoice-footer">
+            <p data-i18n="print_footer">Thank you for your business!</p>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="translations.js"></script>
+    <script>
+        // Provide mock functions for app.js so it doesn't crash on this page
+        window.populateStockItemSelect = () => {};
+        window.renderInvoices = () => {};
+        window.updateDashboard = () => {};
+        window.populateDashboardDatalists = () => {};
+    </script>
+    <script src="store.js"></script>
+    <script src="app.js"></script>
+    <script src="stock.js"></script> <!-- Included for Store access (assuming Store is in stock.js or invoice.js) -->
+    <script src="invoice.js"></script> 
+    <script src="admin.js"></script>
+</body>
+</html>
