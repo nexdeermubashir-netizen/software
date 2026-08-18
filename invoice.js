@@ -211,6 +211,45 @@ function printInvoice(txId, lang = 'en', triggerPrint = true) {
         printBody.appendChild(tr);
     });
 
+    // If previousBalance exists, show it. Otherwise hide the rows.
+    const hasPrevBalance = tx.previousBalance !== undefined && tx.previousBalance !== 0;
+    
+    const labelItemsTotal = document.getElementById('label-items-total-print');
+    const labelPrevBal = document.getElementById('label-prev-bal-print');
+    const labelGrandTotal = document.getElementById('label-grand-total-print');
+
+    if (labelItemsTotal) labelItemsTotal.textContent = lang === 'ur' ? 'آئٹمز کل رقم:' : 'Items Total:';
+    if (labelPrevBal) labelPrevBal.textContent = lang === 'ur' ? 'پچھلا بقایا:' : 'Previous Balance:';
+    if (labelGrandTotal) labelGrandTotal.textContent = lang === 'ur' ? 'کل رقم (Grand Total):' : 'Grand Total:';
+
+    const itemsTotalVal = tx.totalAmount;
+    const prevBalVal = tx.previousBalance || 0;
+    const grandTotalVal = tx.grandTotal !== undefined ? tx.grandTotal : itemsTotalVal;
+
+    const rowPrevBal = document.getElementById('prev-balance-row');
+    const rowGrandTotal = document.getElementById('grand-total-row');
+
+    if (rowPrevBal && rowGrandTotal) {
+        if (hasPrevBalance) {
+            rowPrevBal.style.display = 'block';
+            rowGrandTotal.style.display = 'block';
+            if (labelItemsTotal) labelItemsTotal.textContent = lang === 'ur' ? 'آئٹمز کل رقم:' : 'Items Total:';
+        } else {
+            rowPrevBal.style.display = 'none';
+            rowGrandTotal.style.display = 'none';
+            if (labelItemsTotal) labelItemsTotal.textContent = lang === 'ur' ? 'کل رقم:' : 'Total Amount:';
+        }
+    }
+
+    const itemsTotalEl = document.getElementById('invoice-items-total');
+    if (itemsTotalEl) itemsTotalEl.textContent = parseFloat(itemsTotalVal).toFixed(2);
+
+    const prevBalEl = document.getElementById('invoice-prev-bal');
+    if (prevBalEl) prevBalEl.textContent = parseFloat(prevBalVal).toFixed(2);
+
+    const grandTotalEl = document.getElementById('invoice-grand-total');
+    if (grandTotalEl) grandTotalEl.textContent = parseFloat(grandTotalVal).toFixed(2);
+
     document.getElementById('invoice-paid').textContent = parseFloat(tx.paidAmount).toFixed(2);
     document.getElementById('invoice-remaining').textContent = parseFloat(tx.remainingAmount).toFixed(2);
 

@@ -200,22 +200,57 @@ document.addEventListener('DOMContentLoaded', () => {
     const paidInput = document.getElementById('amount-paid');
     const remainingInput = document.getElementById('amount-remaining');
 
+    const cartTotalInput = document.getElementById('cart-total');
+    const previousBalanceInput = document.getElementById('previous-balance');
+    const personNameInput = document.getElementById('person-name');
+
     window.updateCheckoutFinancials = function(e) {
-        let grandTotal = 0;
-        window.currentCart.forEach(item => { grandTotal += parseFloat(item.totalAmount); });
+        let cartTotal = 0;
+        window.currentCart.forEach(item => { cartTotal += parseFloat(item.totalAmount); });
         
+        if (cartTotalInput) cartTotalInput.value = cartTotal.toFixed(2);
+
+        // Get Previous Balance
+        let prevBalance = 0;
+        if (personNameInput && personNameInput.value.trim() !== '') {
+            let pName = personNameInput.value.trim();
+            const matchWithDash = pName.match(/^\d+\s*-\s*(.+)/);
+            if (matchWithDash) {
+                pName = matchWithDash[1].trim();
+            }
+            
+            // Search all transactions for this person (excluding current editing transaction)
+            const transactions = window.Store.getTransactions();
+            let totalT = 0, totalP = 0;
+            transactions.forEach(t => {
+                if (t.person === pName && t.id !== window.editingTxId) {
+                    totalT += parseFloat(t.totalAmount) || 0;
+                    totalP += parseFloat(t.paidAmount) || 0;
+                }
+            });
+            prevBalance = totalT - totalP;
+        }
+
+        if (previousBalanceInput) previousBalanceInput.value = prevBalance.toFixed(2);
+
+        let grandTotal = cartTotal + prevBalance;
         grandTotalInput.value = grandTotal.toFixed(2);
 
         if (e && e.target !== paidInput && window.currentCart.length > 0) {
             paidInput.value = grandTotal.toFixed(2);
         } else if (window.currentCart.length === 0) {
-            paidInput.value = '0';
+            paidInput.value = prevBalance > 0 ? prevBalance.toFixed(2) : '0';
         }
 
         const paid = parseFloat(paidInput.value) || 0;
         const remaining = grandTotal - paid;
         remainingInput.value = remaining.toFixed(2);
     };
+
+    if (personNameInput) {
+        personNameInput.addEventListener('input', window.updateCheckoutFinancials);
+        personNameInput.addEventListener('change', window.updateCheckoutFinancials);
+    }
 
     if (paidInput) paidInput.addEventListener('input', window.updateCheckoutFinancials);
 
@@ -387,6 +422,13 @@ document.addEventListener('DOMContentLoaded', () => {
         window.populatePersonSelect();
 
         const grandTotal = parseFloat(grandTotalInput.value) || 0;
+        
+        let cartTotal = 0;
+        window.currentCart.forEach(item => { cartTotal += parseFloat(item.totalAmount); });
+
+        const previousBalanceInput = document.getElementById('previous-balance');
+        const prevBalance = previousBalanceInput ? (parseFloat(previousBalanceInput.value) || 0) : 0;
+
         const paid = parseFloat(paidInput.value) || 0;
         const remaining = grandTotal - paid;
 
@@ -395,7 +437,9 @@ document.addEventListener('DOMContentLoaded', () => {
             type: type,
             person: personName,
             items: window.currentCart, // Store the array of items
-            totalAmount: grandTotal,
+            totalAmount: cartTotal,      // Strict cart total so global math doesn't double count!
+            previousBalance: prevBalance, // Saved so invoice generation knows about it
+            grandTotal: grandTotal,       // Saved for easy access
             paidAmount: paid,
             remainingAmount: remaining
         };

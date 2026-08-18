@@ -145,8 +145,11 @@
             <tbody id="print-body"></tbody>
         </table>
         <div class="print-footer-info">
-            <p><span data-i18n="print_paid">Paid:</span> <span id="print-paid-val"></span></p>
-            <p><span data-i18n="print_rem">Remaining:</span> <span id="print-rem-val"></span></p>
+            <p><span id="label-items-total-print"></span> <strong id="invoice-items-total"></strong></p>
+            <p id="prev-balance-row" style="display:none;"><span id="label-prev-bal-print"></span> <strong id="invoice-prev-bal"></strong></p>
+            <p id="grand-total-row" style="display:none;"><span id="label-grand-total-print"></span> <strong id="invoice-grand-total"></strong></p>
+            <p><span id="label-paid-print"></span> <strong id="invoice-paid"></strong></p>
+            <p><span id="label-rem-print"></span> <strong id="invoice-remaining"></strong></p>
         </div>
         <div class="invoice-footer">
             <p data-i18n="print_footer">Thank you for your business!</p>
