@@ -68,6 +68,22 @@
                 </div>
             </div>
 
+            <h2 data-i18n="admin_profit_summary" style="margin-top: 32px; margin-bottom: 16px;">Profit Summary (Sales - Purchases)</h2>
+            <div class="dashboard-stats" style="margin-bottom: 32px;">
+                <div class="stat-card" style="background: linear-gradient(135deg, #8b5cf6, #6d28d9); padding: 20px; border-radius: 12px; display: flex; flex-direction: column; gap: 8px; color: white; box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3); border: none;">
+                    <h3 data-i18n="stat_profit_week" style="margin: 0; font-size: 0.9rem; color: rgba(255,255,255,0.8);">This Week's Profit</h3>
+                    <p id="admin-stat-profit-week" class="stat-value" style="margin: 0; font-size: 1.8rem; font-weight: 700;">0.00</p>
+                </div>
+                <div class="stat-card" style="background: linear-gradient(135deg, #10b981, #059669); padding: 20px; border-radius: 12px; display: flex; flex-direction: column; gap: 8px; color: white; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3); border: none;">
+                    <h3 data-i18n="stat_profit_month" style="margin: 0; font-size: 0.9rem; color: rgba(255,255,255,0.8);">This Month's Profit</h3>
+                    <p id="admin-stat-profit-month" class="stat-value" style="margin: 0; font-size: 1.8rem; font-weight: 700;">0.00</p>
+                </div>
+                <div class="stat-card" style="background: linear-gradient(135deg, #f59e0b, #d97706); padding: 20px; border-radius: 12px; display: flex; flex-direction: column; gap: 8px; color: white; box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3); border: none;">
+                    <h3 data-i18n="stat_profit_overall" style="margin: 0; font-size: 0.9rem; color: rgba(255,255,255,0.8);">Overall Profit</h3>
+                    <p id="admin-stat-profit-overall" class="stat-value" style="margin: 0; font-size: 1.8rem; font-weight: 700;">0.00</p>
+                </div>
+            </div>
+
             <div class="admin-grid">
                 <!-- Add Item Form -->
                 <div class="glass-panel">
@@ -104,7 +120,10 @@
             </div>
             
             <div class="glass-panel" style="margin-top: 32px; margin-bottom: 32px;">
-                <h2 data-i18n="admin_outstanding_balances" style="margin-bottom: 16px;">Outstanding Balances (To Receive)</h2>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
+                    <h2 data-i18n="admin_outstanding_balances" style="margin: 0;">Outstanding Balances (To Receive)</h2>
+                    <input type="text" id="admin-balance-search" placeholder="Search by Person Name or Code..." style="width: 100%; max-width: 400px; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-main); color: var(--text-primary);">
+                </div>
                 <div class="table-container" style="max-height: 400px;">
                     <table id="outstanding-balances-table">
                         <thead>

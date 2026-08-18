@@ -25,7 +25,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     mainContent.style.display = 'block';
                     loginError.style.display = 'none';
                     isAuthenticated = true;
-                    if (document.getElementById('items-table')) renderItemsTable();
+                    if (document.getElementById('items-table')) {
+                        renderItemsTable();
+                        if (typeof renderOutstandingBalances === 'function') renderOutstandingBalances();
+                    }
                 } else {
                     loginError.style.display = 'block';
                 }
@@ -73,11 +76,18 @@ function renderItemsTable() {
         return;
     }
 
-    // Calculate totals per item and overall totals
     const itemTotals = {};
     let overallIn = 0;
     let overallOut = 0;
     let overallRem = 0;
+
+    let overallProfit = 0;
+    let weekProfit = 0;
+    let monthProfit = 0;
+
+    const now = new Date();
+    const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const oneMonthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
     items.forEach(item => {
         itemTotals[item.id] = { in: 0, out: 0 };
@@ -91,9 +101,23 @@ function renderItemsTable() {
             overallOut += parseFloat(tx.totalKg) || 0;
             if (itemTotals[tx.itemId]) itemTotals[tx.itemId].out += parseFloat(tx.totalKg) || 0;
         }
+        
         const tAmt = parseFloat(tx.totalAmount) || 0;
         const pAmt = parseFloat(tx.paidAmount) || 0;
         overallRem += (tAmt - pAmt);
+
+        // Profit Calculation
+        const txDate = new Date(tx.date);
+        let profitContribution = 0;
+        if (tx.type === 'out') {
+            profitContribution = tAmt;
+        } else if (tx.type === 'in') {
+            profitContribution = -tAmt;
+        }
+
+        overallProfit += profitContribution;
+        if (txDate >= oneWeekAgo) weekProfit += profitContribution;
+        if (txDate >= oneMonthAgo) monthProfit += profitContribution;
     });
 
     // Update Dashboard Cards
@@ -102,10 +126,18 @@ function renderItemsTable() {
     const elOut = document.getElementById('admin-stat-out');
     const elRem = document.getElementById('admin-stat-rem');
     
+    const elProfitWeek = document.getElementById('admin-stat-profit-week');
+    const elProfitMonth = document.getElementById('admin-stat-profit-month');
+    const elProfitOverall = document.getElementById('admin-stat-profit-overall');
+    
     if (elItems) elItems.textContent = items.length;
     if (elIn) elIn.textContent = overallIn.toFixed(2);
     if (elOut) elOut.textContent = overallOut.toFixed(2);
     if (elRem) elRem.textContent = overallRem.toFixed(2);
+
+    if (elProfitWeek) elProfitWeek.textContent = weekProfit.toFixed(2);
+    if (elProfitMonth) elProfitMonth.textContent = monthProfit.toFixed(2);
+    if (elProfitOverall) elProfitOverall.textContent = overallProfit.toFixed(2);
 
     items.forEach((item, index) => {
         const stats = itemTotals[item.id];
@@ -253,6 +285,18 @@ function showEditModal(item, onConfirm) {
     };
 }
 
+let currentBalanceSearchQuery = '';
+
+document.addEventListener('DOMContentLoaded', () => {
+    const balSearch = document.getElementById('admin-balance-search');
+    if (balSearch) {
+        balSearch.addEventListener('input', (e) => {
+            currentBalanceSearchQuery = e.target.value.toLowerCase();
+            renderOutstandingBalances();
+        });
+    }
+});
+
 function renderOutstandingBalances() {
     const transactions = window.Store.getTransactions();
     const tbody = document.querySelector('#outstanding-balances-table tbody');
@@ -271,20 +315,35 @@ function renderOutstandingBalances() {
         balances[tx.person] += (totalAmt - paidAmt);
     });
     
-    const personsWithBalance = Object.entries(balances)
+    const personsList = window.Store.getPersons();
+    
+    let personsWithBalance = Object.entries(balances)
         .filter(([person, bal]) => bal > 0.01) // ignore tiny floating point errors
-        .sort((a, b) => b[1] - a[1]);
+        .map(([person, bal]) => {
+            const index = personsList.findIndex(p => p.name === person);
+            const code = index !== -1 ? (index + 1).toString() : '';
+            return { person, bal, code };
+        });
+
+    if (currentBalanceSearchQuery) {
+        personsWithBalance = personsWithBalance.filter(item => {
+            return item.person.toLowerCase().includes(currentBalanceSearchQuery) || 
+                   item.code.includes(currentBalanceSearchQuery);
+        });
+    }
+    
+    personsWithBalance.sort((a, b) => b.bal - a.bal);
         
     if (personsWithBalance.length === 0) {
         tbody.innerHTML = '<tr><td colspan="2" style="text-align: center; color: var(--text-secondary);">No outstanding balances.</td></tr>';
         return;
     }
     
-    personsWithBalance.forEach(([person, bal]) => {
+    personsWithBalance.forEach(item => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
-            <td><strong>${person}</strong></td>
-            <td style="color: var(--danger); font-weight: 700;">${bal.toFixed(2)}</td>
+            <td><strong>${item.code ? item.code + ' - ' : ''}${item.person}</strong></td>
+            <td style="color: var(--danger); font-weight: 700;">${item.bal.toFixed(2)}</td>
         `;
         tbody.appendChild(tr);
     });
