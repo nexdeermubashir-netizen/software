@@ -184,12 +184,24 @@ document.addEventListener('DOMContentLoaded', () => {
             if (currentPath.startsWith('/')) {
                 currentPath = currentPath.substring(1);
             }
-            // Replace forward slashes with backslashes for Windows path
+            
+            currentPath = decodeURI(currentPath); // Handle spaces in URL
             currentPath = currentPath.replace(/\//g, '\\');
+            const sourceDir = currentPath.substring(0, currentPath.lastIndexOf('\\'));
             
             const batContent = `@echo off
-echo Creating StockMaster Desktop Shortcut...
-set "URI_PATH=${currentPath}"
+echo Installing StockMaster App...
+set "SOURCE_DIR=${sourceDir}"
+set "TARGET_DIR=%USERPROFILE%\\StockMaster"
+
+echo Creating application folder...
+mkdir "%TARGET_DIR%" 2>nul
+
+echo Copying files to %TARGET_DIR%...
+xcopy /E /I /Y "%SOURCE_DIR%" "%TARGET_DIR%" >nul
+
+echo Creating Desktop Shortcut...
+set "URI_PATH=%TARGET_DIR%\\index.html"
 set "URI_PATH=%URI_PATH:\\=/%"
 set "PS_SCRIPT=%TEMP%\\create_shortcut.ps1"
 echo $WshShell = New-Object -comObject WScript.Shell > "%PS_SCRIPT%"
@@ -201,14 +213,16 @@ echo $Shortcut.Save() >> "%PS_SCRIPT%"
 powershell -ExecutionPolicy Bypass -NoProfile -File "%PS_SCRIPT%"
 del "%PS_SCRIPT%"
 
-echo Desktop icon created successfully on your Desktop!
+echo.
+echo Install complete! The app has been copied to %TARGET_DIR%.
+echo A shortcut has been created on your Desktop.
 pause
 `;
             const blob = new Blob([batContent], { type: 'text/plain' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = 'Create_StockMaster_Shortcut.bat';
+            a.download = 'Install_StockMaster.bat';
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
