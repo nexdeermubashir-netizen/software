@@ -98,7 +98,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-function printInvoice(txId, lang = 'en') {
+function printInvoice(txId, lang = 'en', triggerPrint = true) {
     const transactions = window.Store.getTransactions();
     const tx = transactions.find(t => t.id === txId);
 
@@ -112,7 +112,7 @@ function printInvoice(txId, lang = 'en') {
     // Set Translations
     const t = {
         title: lang === 'ur' ? "بل / انوائس" : "INVOICE",
-        company: "Abdul Samad Quraishi",
+        company: "Wanda Material Invoice",
         date: lang === 'ur' ? "تاریخ: " : "Date: ",
         person: lang === 'ur' ? "نام: " : "Person: ",
         labelType: lang === 'ur' ? "قسم:" : "Transaction Type:",
@@ -166,29 +166,47 @@ function printInvoice(txId, lang = 'en') {
 
     const txItems = tx.items || [tx];
     txItems.forEach(item => {
+        let displayQty = item.qty !== undefined ? item.qty : parseFloat(item.totalKg || 0);
+        let displayUnit = item.unit || 'kg';
         let weightStr = [];
-        if (item.weight) {
+        
+        let unitLabel = t.kg;
+        if (displayUnit === 'mun') unitLabel = t.mun;
+        else if (displayUnit === 'kg') unitLabel = t.kg;
+        else if (displayUnit === 'gram') unitLabel = t.gram;
+        else if (displayUnit === 'ltr') unitLabel = t.ltr;
+        else if (displayUnit === 'ml') unitLabel = t.ml;
+        else if (displayUnit === 'amount') unitLabel = lang === 'ur' ? 'تعداد' : 'Pcs';
+        
+        if (item.qty !== undefined && item.unit) {
+            weightStr.push(`${displayQty} ${unitLabel}`);
+        } else if (item.weight) {
+            // Old format fallback
             if (item.weight.mun > 0) weightStr.push(`${item.weight.mun} ${t.mun}`);
             if (item.weight.kg > 0) weightStr.push(`${item.weight.kg} ${t.kg}`);
             if (item.weight.grams > 0) weightStr.push(`${item.weight.grams} ${t.gram}`);
             if (item.weight.ltr > 0) weightStr.push(`${item.weight.ltr} ${t.ltr}`);
             if (item.weight.ml > 0) weightStr.push(`${item.weight.ml} ${t.ml}`);
-        } else {
-            // fallback
-            weightStr.push(`${parseFloat(item.totalKg).toFixed(3)} ${t.kg}`);
         }
+        
+        if (weightStr.length === 0) weightStr.push(`${parseFloat(item.totalKg || 0).toFixed(3)} ${t.kg}`);
 
-        if (weightStr.length === 0) weightStr.push(`0 ${t.kg}`);
+        let secondColHtml = '';
+        if (item.itemName && item.itemName.toLowerCase().includes('freight')) {
+            secondColHtml = '-';
+        } else {
+            secondColHtml = `
+                <div>${weightStr.join(', ')}</div>
+                <div style="font-size: 0.8em; color: #555;">(${parseFloat(item.totalKg || 0).toFixed(3)} ${t.labelKg})</div>
+            `;
+        }
 
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td>${item.itemName || 'Unknown Item'}</td>
-            <td>
-                <div>${weightStr.join(', ')}</div>
-                <div style="font-size: 0.8em; color: #555;">(${parseFloat(item.totalKg).toFixed(3)} ${t.labelKg})</div>
-            </td>
-            <td>${parseFloat(item.ratePerKg).toFixed(2)}</td>
-            <td>${parseFloat(item.totalAmount).toFixed(2)}</td>
+            <td>${secondColHtml}</td>
+            <td>${parseFloat(item.ratePerKg || 0).toFixed(2)}</td>
+            <td>${parseFloat(item.totalAmount || 0).toFixed(2)}</td>
         `;
         printBody.appendChild(tr);
     });
@@ -201,10 +219,14 @@ function printInvoice(txId, lang = 'en') {
     document.title = `Invoice-${tx.id}`;
 
     // Trigger Print
-    setTimeout(() => {
-        window.print();
+    if (triggerPrint) {
+        setTimeout(() => {
+            window.print();
+            document.title = originalTitle;
+        }, 100);
+    } else {
         document.title = originalTitle;
-    }, 100);
+    }
 }
 
 window.editInvoice = function(txId) {
@@ -232,7 +254,12 @@ function deleteInvoice(txId) {
     }
 }
 
-window.shareWhatsApp = function (txId) {
+window.shareWhatsApp = async function (txId) {
+    if (typeof html2canvas === 'undefined') {
+        alert("Image rendering library is not loaded. Please ensure you have internet connection.");
+        return;
+    }
+
     const transactions = window.Store.getTransactions();
     const tx = transactions.find(t => t.id === txId);
     if (!tx) {
@@ -240,75 +267,97 @@ window.shareWhatsApp = function (txId) {
         return;
     }
 
-    let itemName = tx.itemName;
-    if (!itemName) {
-        const item = window.Store.getItems().find(i => i.id === tx.itemId);
-        itemName = item ? item.name : 'Unknown Item';
-    }
-
-    const dateObj = new Date(tx.date);
-    const dateStr = dateObj.toLocaleDateString() + ' ' + dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const lang = localStorage.getItem('lang') || 'en';
-
-    let message = "";
     
-    const txItems = tx.items || [tx];
-    let itemsListUrdu = txItems.map((item, i) => `${i+1}. ${item.itemName} | ${parseFloat(item.totalKg).toFixed(3)} کلو | ریٹ: ${parseFloat(item.ratePerKg).toFixed(2)} | کل: ${parseFloat(item.totalAmount).toFixed(2)}`).join('\n');
-    let itemsListEn = txItems.map((item, i) => `${i+1}. ${item.itemName} | ${parseFloat(item.totalKg).toFixed(3)} Kg | Rate: ${parseFloat(item.ratePerKg).toFixed(2)} | Total: ${parseFloat(item.totalAmount).toFixed(2)}`).join('\n');
+    // Populate the print area
+    printInvoice(txId, lang, false);
 
-    if (lang === 'ur') {
-        const typeStr = tx.type.toUpperCase() === 'IN' ? "خریداری (Stock In)" : "فروخت (Stock Out)";
-        message = `\u200E\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0بسم اللہ الرحمن الرحیم
-🏢 *منجانب: Abdul Samad Quraishi*
-*موبائل:* 0000000-0300
------------------------------------
-*بل / انوائس: ${tx.id}*
-*تاریخ:* ${dateStr}
-*نام:* ${tx.person || 'N/A'}
-*قسم:* ${typeStr}
------------------------------------
-*آئٹمز:*
-${itemsListUrdu}
------------------------------------
-*کل رقم:* ${parseFloat(tx.totalAmount).toFixed(2)}
-*ادا شدہ:* ${parseFloat(tx.paidAmount).toFixed(2)}
-*بقایا:* ${parseFloat(tx.remainingAmount).toFixed(2)}
+    const printArea = document.getElementById('print-area');
+    
+    // Temporarily show the print area to capture it
+    const originalDisplay = printArea.style.display;
+    const originalPosition = printArea.style.position;
+    const originalTop = printArea.style.top;
+    const originalZIndex = printArea.style.zIndex;
 
-ہمارے ساتھ کاروبار کرنے کا شکریہ!`;
-    } else {
-        const typeStr = tx.type.toUpperCase() === 'IN' ? 'Stock In (Purchase)' : 'Stock Out (Sale)';
-        message = `\u200E\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0بسم اللہ الرحمن الرحیم
-🏢 *From: Abdul Samad Quraishi*
-*Mobile:* 0300-0000000
------------------------------------
-*INVOICE: ${tx.id}*
-*Date:* ${dateStr}
-*Name:* ${tx.person || 'N/A'}
-*Type:* ${typeStr}
------------------------------------
-*Items:*
-${itemsListEn}
------------------------------------
-*Total Amount:* ${parseFloat(tx.totalAmount).toFixed(2)}
-*Paid:* ${parseFloat(tx.paidAmount).toFixed(2)}
-*Remaining:* ${parseFloat(tx.remainingAmount).toFixed(2)}
+    printArea.classList.remove('print-only');
+    printArea.style.display = 'block';
+    printArea.style.position = 'absolute';
+    printArea.style.top = '-9999px';
+    printArea.style.zIndex = '-1';
+    printArea.style.background = '#ffffff';
 
-\u200E\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0جزاک اللہ`;
+    try {
+        // Capture image
+        const canvas = await html2canvas(printArea, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
+        
+        // Restore styles
+        printArea.classList.add('print-only');
+        printArea.style.display = originalDisplay;
+        printArea.style.position = originalPosition;
+        printArea.style.top = originalTop;
+        printArea.style.zIndex = originalZIndex;
+
+        // Convert to blob
+        canvas.toBlob(async function(blob) {
+            if (!blob) {
+                alert("Failed to generate image.");
+                return;
+            }
+
+            const fileName = `Invoice-${tx.id}.png`;
+            const file = new File([blob], fileName, { type: 'image/png' });
+
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+            // Web Share API support check - ONLY use on Mobile to prevent Windows Desktop Share Drawer
+            if (isMobile && navigator.canShare && navigator.canShare({ files: [file] })) {
+                try {
+                    await navigator.share({
+                        files: [file],
+                        title: fileName
+                    });
+                    return; // Successfully shared natively
+                } catch (err) {
+                    console.log("Share failed or was cancelled:", err);
+                }
+            }
+            
+            // Fallback for Desktop or unsupported browsers
+            // Download the image
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            // Copy to clipboard if supported
+            if (navigator.clipboard && navigator.clipboard.write) {
+                try {
+                    const clipboardItem = new ClipboardItem({ 'image/png': blob });
+                    await navigator.clipboard.write([clipboardItem]);
+                    alert("Invoice image downloaded and copied to your clipboard!");
+                } catch (err) {
+                    console.log("Clipboard write failed:", err);
+                    alert("Invoice image downloaded successfully!");
+                }
+            } else {
+                alert("Invoice image downloaded successfully!");
+            }
+        }, 'image/png');
+    } catch (err) {
+        console.error("html2canvas error:", err);
+        alert("Failed to generate invoice image.");
+        // Ensure cleanup
+        printArea.classList.add('print-only');
+        printArea.style.display = originalDisplay;
+        printArea.style.position = originalPosition;
+        printArea.style.top = originalTop;
+        printArea.style.zIndex = originalZIndex;
     }
-    const encodedMessage = encodeURIComponent(message);
-
-    // Detect if the user is on a mobile device
-    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-
-    let whatsappUrl;
-    if (isMobile) {
-        whatsappUrl = `https://wa.me/?text=${encodedMessage}`;
-    } else {
-        // Use WhatsApp Web for desktop
-        whatsappUrl = `https://web.whatsapp.com/send?text=${encodedMessage}`;
-    }
-    // Open WhatsApp in a new tab
-    window.open(whatsappUrl, '_blank');
 };
 
 window.copyInvoice = function (txId) {
@@ -337,10 +386,10 @@ window.copyInvoice = function (txId) {
 
     if (lang === 'ur') {
         const typeStr = tx.type.toUpperCase() === 'IN' ? "خریداری (Stock In)" : "فروخت (Stock Out)";
-        message = `\u200E\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0بسم اللہ الرحمن الرحیم\n🏢 *منجانب: Abdul Samad Quraishi*\n*موبائل:* 0000000-0300\n-----------------------------------\n*بل / انوائس: ${tx.id}*\n*تاریخ:* ${dateStr}\n*نام:* ${tx.person || 'N/A'}\n*قسم:* ${typeStr}\n-----------------------------------\n*آئٹمز:*\n${itemsListUrdu}\n-----------------------------------\n*کل رقم:* ${parseFloat(tx.totalAmount).toFixed(2)}\n*ادا شدہ:* ${parseFloat(tx.paidAmount).toFixed(2)}\n*بقایا:* ${parseFloat(tx.remainingAmount).toFixed(2)}\n\n\u200E\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0جزاک اللہ`;
+        message = `\u200E\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0بسم اللہ الرحمن الرحیم\n🏢 *منجانب: Wanda Material Invoice*\n-----------------------------------\n*بل / انوائس: ${tx.id}*\n*تاریخ:* ${dateStr}\n*نام:* ${tx.person || 'N/A'}\n*قسم:* ${typeStr}\n-----------------------------------\n*آئٹمز:*\n${itemsListUrdu}\n-----------------------------------\n*کل رقم:* ${parseFloat(tx.totalAmount).toFixed(2)}\n*ادا شدہ:* ${parseFloat(tx.paidAmount).toFixed(2)}\n*بقایا:* ${parseFloat(tx.remainingAmount).toFixed(2)}\n\n\u200E\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0جزاک اللہ`;
     } else {
         const typeStr = tx.type.toUpperCase() === 'IN' ? 'Stock In (Purchase)' : 'Stock Out (Sale)';
-        message = `\u200E\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0بسم اللہ الرحمن الرحیم\n🏢 *From: Abdul Samad Quraishi*\n*Mobile:* 0300-0000000\n-----------------------------------\n*INVOICE: ${tx.id}*\n*Date:* ${dateStr}\n*Name:* ${tx.person || 'N/A'}\n*Type:* ${typeStr}\n-----------------------------------\n*Items:*\n${itemsListEn}\n-----------------------------------\n*Total Amount:* ${parseFloat(tx.totalAmount).toFixed(2)}\n*Paid:* ${parseFloat(tx.paidAmount).toFixed(2)}\n*Remaining:* ${parseFloat(tx.remainingAmount).toFixed(2)}\n\n\u200E\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0جزاک اللہ`;
+        message = `\u200E\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0بسم اللہ الرحمن الرحیم\n🏢 *From: Wanda Material Invoice*\n-----------------------------------\n*INVOICE: ${tx.id}*\n*Date:* ${dateStr}\n*Name:* ${tx.person || 'N/A'}\n*Type:* ${typeStr}\n-----------------------------------\n*Items:*\n${itemsListEn}\n-----------------------------------\n*Total Amount:* ${parseFloat(tx.totalAmount).toFixed(2)}\n*Paid:* ${parseFloat(tx.paidAmount).toFixed(2)}\n*Remaining:* ${parseFloat(tx.remainingAmount).toFixed(2)}\n\n\u200E\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0جزاک اللہ`;
     }
 
     if (navigator.clipboard && navigator.clipboard.writeText) {
