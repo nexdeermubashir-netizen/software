@@ -61,6 +61,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     <button class="action-btn" title="Copy Invoice" onclick="copyInvoice('${tx.id}')">
                         <i class='bx bx-copy'></i>
                     </button>
+                    <button class="action-btn" title="Edit Invoice" onclick="editInvoice('${tx.id}')">
+                        <i class='bx bx-edit'></i>
+                    </button>
                     <button class="action-btn del" title="Delete Invoice" onclick="deleteInvoice('${tx.id}')">
                         <i class='bx bx-trash'></i>
                     </button>
@@ -104,11 +107,7 @@ function printInvoice(txId, lang = 'en') {
         return;
     }
 
-    let itemName = tx.itemName;
-    if (!itemName) {
-        const item = window.Store.getItems().find(i => i.id === tx.itemId);
-        itemName = item ? item.name : 'Unknown Item';
-    }
+    let itemName = tx.itemName || 'Multiple Items';
 
     // Set Translations
     const t = {
@@ -117,12 +116,10 @@ function printInvoice(txId, lang = 'en') {
         date: lang === 'ur' ? "تاریخ: " : "Date: ",
         person: lang === 'ur' ? "نام: " : "Person: ",
         labelType: lang === 'ur' ? "قسم:" : "Transaction Type:",
-        labelItem: lang === 'ur' ? "آئٹم:" : "Item:",
         thDesc: lang === 'ur' ? "تفصیل" : "Description",
         thWeight: lang === 'ur' ? "وزن" : "Weight",
-        thRate: lang === 'ur' ? "ریٹ/کلو" : "Rate/Kg",
+        thRate: lang === 'ur' ? "ریٹ/کلو" : "Rate/Unit",
         thTotal: lang === 'ur' ? "کل رقم" : "Total",
-        tdDesc: lang === 'ur' ? "سٹاک ریکارڈ" : "Stock Record",
         labelKg: lang === 'ur' ? "کلو" : "Kg",
         labelPaid: lang === 'ur' ? "ادا شدہ:" : "Paid:",
         labelRem: lang === 'ur' ? "بقایا:" : "Remaining:",
@@ -145,16 +142,10 @@ function printInvoice(txId, lang = 'en') {
     document.getElementById('label-type').textContent = t.labelType;
     document.getElementById('invoice-type').textContent = tx.type.toUpperCase() === 'IN' ? t.typeIn : t.typeOut;
 
-    document.getElementById('label-item').textContent = t.labelItem;
-    document.getElementById('invoice-item').textContent = itemName;
-
     document.getElementById('th-desc').textContent = t.thDesc;
     document.getElementById('th-weight').textContent = t.thWeight;
     document.getElementById('th-rate').textContent = t.thRate;
     document.getElementById('th-total').textContent = t.thTotal;
-
-    document.getElementById('td-desc').textContent = t.tdDesc;
-    document.getElementById('label-kg').textContent = t.labelKg;
 
     document.getElementById('label-paid-print').textContent = t.labelPaid;
     document.getElementById('label-rem-print').textContent = t.labelRem;
@@ -170,20 +161,37 @@ function printInvoice(txId, lang = 'en') {
         printArea.style.fontFamily = 'inherit';
     }
 
-    let weightStr = [];
-    if (tx.weight.mun > 0) weightStr.push(`${tx.weight.mun} ${t.mun}`);
-    if (tx.weight.kg > 0) weightStr.push(`${tx.weight.kg} ${t.kg}`);
-    if (tx.weight.grams > 0) weightStr.push(`${tx.weight.grams} ${t.gram}`);
-    if (tx.weight.ltr > 0) weightStr.push(`${tx.weight.ltr} ${t.ltr}`);
-    if (tx.weight.ml > 0) weightStr.push(`${tx.weight.ml} ${t.ml}`);
+    const printBody = document.getElementById('print-body');
+    printBody.innerHTML = '';
 
-    if (weightStr.length === 0) weightStr.push(`0 ${t.kg}`);
+    const txItems = tx.items || [tx];
+    txItems.forEach(item => {
+        let weightStr = [];
+        if (item.weight) {
+            if (item.weight.mun > 0) weightStr.push(`${item.weight.mun} ${t.mun}`);
+            if (item.weight.kg > 0) weightStr.push(`${item.weight.kg} ${t.kg}`);
+            if (item.weight.grams > 0) weightStr.push(`${item.weight.grams} ${t.gram}`);
+            if (item.weight.ltr > 0) weightStr.push(`${item.weight.ltr} ${t.ltr}`);
+            if (item.weight.ml > 0) weightStr.push(`${item.weight.ml} ${t.ml}`);
+        } else {
+            // fallback
+            weightStr.push(`${parseFloat(item.totalKg).toFixed(3)} ${t.kg}`);
+        }
 
-    document.getElementById('invoice-weight-text').textContent = weightStr.join(', ');
-    document.getElementById('invoice-kg-total').textContent = parseFloat(tx.totalKg).toFixed(3);
+        if (weightStr.length === 0) weightStr.push(`0 ${t.kg}`);
 
-    document.getElementById('invoice-rate').textContent = parseFloat(tx.ratePerKg).toFixed(2);
-    document.getElementById('invoice-total').textContent = parseFloat(tx.totalAmount).toFixed(2);
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${item.itemName || 'Unknown Item'}</td>
+            <td>
+                <div>${weightStr.join(', ')}</div>
+                <div style="font-size: 0.8em; color: #555;">(${parseFloat(item.totalKg).toFixed(3)} ${t.labelKg})</div>
+            </td>
+            <td>${parseFloat(item.ratePerKg).toFixed(2)}</td>
+            <td>${parseFloat(item.totalAmount).toFixed(2)}</td>
+        `;
+        printBody.appendChild(tr);
+    });
 
     document.getElementById('invoice-paid').textContent = parseFloat(tx.paidAmount).toFixed(2);
     document.getElementById('invoice-remaining').textContent = parseFloat(tx.remainingAmount).toFixed(2);
@@ -198,6 +206,21 @@ function printInvoice(txId, lang = 'en') {
         document.title = originalTitle;
     }, 100);
 }
+
+window.editInvoice = function(txId) {
+    const transactions = window.Store.getTransactions();
+    const tx = transactions.find(t => t.id === txId);
+    if (!tx) {
+        alert("Transaction not found.");
+        return;
+    }
+
+    // Save editing state to session storage
+    sessionStorage.setItem('editingTxId', txId);
+    
+    // Redirect to Dashboard (index.html)
+    window.location.href = 'index.html';
+};
 
 function deleteInvoice(txId) {
     if (confirm("Are you sure you want to delete this invoice? This action cannot be undone.")) {
@@ -228,6 +251,11 @@ window.shareWhatsApp = function (txId) {
     const lang = localStorage.getItem('lang') || 'en';
 
     let message = "";
+    
+    const txItems = tx.items || [tx];
+    let itemsListUrdu = txItems.map((item, i) => `${i+1}. ${item.itemName} | ${parseFloat(item.totalKg).toFixed(3)} کلو | ریٹ: ${parseFloat(item.ratePerKg).toFixed(2)} | کل: ${parseFloat(item.totalAmount).toFixed(2)}`).join('\n');
+    let itemsListEn = txItems.map((item, i) => `${i+1}. ${item.itemName} | ${parseFloat(item.totalKg).toFixed(3)} Kg | Rate: ${parseFloat(item.ratePerKg).toFixed(2)} | Total: ${parseFloat(item.totalAmount).toFixed(2)}`).join('\n');
+
     if (lang === 'ur') {
         const typeStr = tx.type.toUpperCase() === 'IN' ? "خریداری (Stock In)" : "فروخت (Stock Out)";
         message = `\u200E\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0بسم اللہ الرحمن الرحیم
@@ -238,9 +266,10 @@ window.shareWhatsApp = function (txId) {
 *تاریخ:* ${dateStr}
 *نام:* ${tx.person || 'N/A'}
 *قسم:* ${typeStr}
-*آئٹم:* ${itemName}
-*وزن:* ${parseFloat(tx.totalKg).toFixed(3)} کلو
-*ریٹ/کلو:* ${parseFloat(tx.ratePerKg).toFixed(2)}
+-----------------------------------
+*آئٹمز:*
+${itemsListUrdu}
+-----------------------------------
 *کل رقم:* ${parseFloat(tx.totalAmount).toFixed(2)}
 *ادا شدہ:* ${parseFloat(tx.paidAmount).toFixed(2)}
 *بقایا:* ${parseFloat(tx.remainingAmount).toFixed(2)}
@@ -256,9 +285,10 @@ window.shareWhatsApp = function (txId) {
 *Date:* ${dateStr}
 *Name:* ${tx.person || 'N/A'}
 *Type:* ${typeStr}
-*Item:* ${itemName}
-*Weight:* ${parseFloat(tx.totalKg).toFixed(3)} Kg
-*Rate:* ${parseFloat(tx.ratePerKg).toFixed(2)}
+-----------------------------------
+*Items:*
+${itemsListEn}
+-----------------------------------
 *Total Amount:* ${parseFloat(tx.totalAmount).toFixed(2)}
 *Paid:* ${parseFloat(tx.paidAmount).toFixed(2)}
 *Remaining:* ${parseFloat(tx.remainingAmount).toFixed(2)}
@@ -300,12 +330,17 @@ window.copyInvoice = function (txId) {
     const lang = localStorage.getItem('lang') || 'en';
 
     let message = "";
+    
+    const txItems = tx.items || [tx];
+    let itemsListUrdu = txItems.map((item, i) => `${i+1}. ${item.itemName} | ${parseFloat(item.totalKg).toFixed(3)} کلو | ریٹ: ${parseFloat(item.ratePerKg).toFixed(2)} | کل: ${parseFloat(item.totalAmount).toFixed(2)}`).join('\n');
+    let itemsListEn = txItems.map((item, i) => `${i+1}. ${item.itemName} | ${parseFloat(item.totalKg).toFixed(3)} Kg | Rate: ${parseFloat(item.ratePerKg).toFixed(2)} | Total: ${parseFloat(item.totalAmount).toFixed(2)}`).join('\n');
+
     if (lang === 'ur') {
         const typeStr = tx.type.toUpperCase() === 'IN' ? "خریداری (Stock In)" : "فروخت (Stock Out)";
-        message = `\u200E\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0بسم اللہ الرحمن الرحیم\n🏢 *منجانب: Abdul Samad Quraishi*\n*موبائل:* 0000000-0300\n-----------------------------------\n*بل / انوائس: ${tx.id}*\n*تاریخ:* ${dateStr}\n*نام:* ${tx.person || 'N/A'}\n*قسم:* ${typeStr}\n*آئٹم:* ${itemName}\n*وزن:* ${parseFloat(tx.totalKg).toFixed(3)} کلو\n*ریٹ/کلو:* ${parseFloat(tx.ratePerKg).toFixed(2)}\n*کل رقم:* ${parseFloat(tx.totalAmount).toFixed(2)}\n*ادا شدہ:* ${parseFloat(tx.paidAmount).toFixed(2)}\n*بقایا:* ${parseFloat(tx.remainingAmount).toFixed(2)}\n\n\u200E\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0جزاک اللہ`;
+        message = `\u200E\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0بسم اللہ الرحمن الرحیم\n🏢 *منجانب: Abdul Samad Quraishi*\n*موبائل:* 0000000-0300\n-----------------------------------\n*بل / انوائس: ${tx.id}*\n*تاریخ:* ${dateStr}\n*نام:* ${tx.person || 'N/A'}\n*قسم:* ${typeStr}\n-----------------------------------\n*آئٹمز:*\n${itemsListUrdu}\n-----------------------------------\n*کل رقم:* ${parseFloat(tx.totalAmount).toFixed(2)}\n*ادا شدہ:* ${parseFloat(tx.paidAmount).toFixed(2)}\n*بقایا:* ${parseFloat(tx.remainingAmount).toFixed(2)}\n\n\u200E\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0جزاک اللہ`;
     } else {
         const typeStr = tx.type.toUpperCase() === 'IN' ? 'Stock In (Purchase)' : 'Stock Out (Sale)';
-        message = `\u200E\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0بسم اللہ الرحمن الرحیم\n🏢 *From: Abdul Samad Quraishi*\n*Mobile:* 0300-0000000\n-----------------------------------\n*INVOICE: ${tx.id}*\n*Date:* ${dateStr}\n*Name:* ${tx.person || 'N/A'}\n*Type:* ${typeStr}\n*Item:* ${itemName}\n*Weight:* ${parseFloat(tx.totalKg).toFixed(3)} Kg\n*Rate:* ${parseFloat(tx.ratePerKg).toFixed(2)}\n*Total Amount:* ${parseFloat(tx.totalAmount).toFixed(2)}\n*Paid:* ${parseFloat(tx.paidAmount).toFixed(2)}\n*Remaining:* ${parseFloat(tx.remainingAmount).toFixed(2)}\n\n\u200E\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0جزاک اللہ`;
+        message = `\u200E\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0بسم اللہ الرحمن الرحیم\n🏢 *From: Abdul Samad Quraishi*\n*Mobile:* 0300-0000000\n-----------------------------------\n*INVOICE: ${tx.id}*\n*Date:* ${dateStr}\n*Name:* ${tx.person || 'N/A'}\n*Type:* ${typeStr}\n-----------------------------------\n*Items:*\n${itemsListEn}\n-----------------------------------\n*Total Amount:* ${parseFloat(tx.totalAmount).toFixed(2)}\n*Paid:* ${parseFloat(tx.paidAmount).toFixed(2)}\n*Remaining:* ${parseFloat(tx.remainingAmount).toFixed(2)}\n\n\u200E\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0جزاک اللہ`;
     }
 
     if (navigator.clipboard && navigator.clipboard.writeText) {

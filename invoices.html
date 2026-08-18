@@ -64,7 +64,6 @@
             <p id="invoice-date"></p>
             <p id="invoice-person"></p>
             <p><strong id="label-type"></strong> <span id="invoice-type"></span></p>
-            <p><strong id="label-item"></strong> <span id="invoice-item"></span></p>
         </div>
         <table class="print-table">
             <thead>
@@ -76,15 +75,7 @@
                 </tr>
             </thead>
             <tbody id="print-body">
-                <tr>
-                    <td id="td-desc">Stock Record</td>
-                    <td>
-                        <div id="invoice-weight-text"></div>
-                        <div style="font-size: 0.8em; color: #555;">(<span id="invoice-kg-total"></span> <span id="label-kg"></span>)</div>
-                    </td>
-                    <td id="invoice-rate"></td>
-                    <td id="invoice-total"></td>
-                </tr>
+                <!-- Rows injected dynamically -->
             </tbody>
         </table>
         <div class="print-footer-info">

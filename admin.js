@@ -38,6 +38,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Load initial items if we are on the items page and authenticated
     if (isAuthenticated && document.getElementById('items-table')) {
         renderItemsTable();
+        if (typeof renderOutstandingBalances === 'function') renderOutstandingBalances();
     }
 
     if (addItemForm) {
@@ -51,6 +52,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 input.value = '';
                 if (document.getElementById('items-table')) {
                     renderItemsTable();
+                    if (typeof renderOutstandingBalances === 'function') renderOutstandingBalances();
                 }
                 if (window.populateStockItemSelect) window.populateStockItemSelect();
             }
@@ -89,7 +91,9 @@ function renderItemsTable() {
             overallOut += parseFloat(tx.totalKg) || 0;
             if (itemTotals[tx.itemId]) itemTotals[tx.itemId].out += parseFloat(tx.totalKg) || 0;
         }
-        overallRem += parseFloat(tx.remainingAmount) || 0;
+        const tAmt = parseFloat(tx.totalAmount) || 0;
+        const pAmt = parseFloat(tx.paidAmount) || 0;
+        overallRem += (tAmt - pAmt);
     });
 
     // Update Dashboard Cards
@@ -247,4 +251,41 @@ function showEditModal(item, onConfirm) {
         }
         if (e.key === 'Escape') closeModal();
     };
+}
+
+function renderOutstandingBalances() {
+    const transactions = window.Store.getTransactions();
+    const tbody = document.querySelector('#outstanding-balances-table tbody');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+    
+    const balances = {};
+    
+    transactions.forEach(tx => {
+        if (!tx.person) return;
+        if (!balances[tx.person]) {
+            balances[tx.person] = 0;
+        }
+        const totalAmt = parseFloat(tx.totalAmount) || 0;
+        const paidAmt = parseFloat(tx.paidAmount) || 0;
+        balances[tx.person] += (totalAmt - paidAmt);
+    });
+    
+    const personsWithBalance = Object.entries(balances)
+        .filter(([person, bal]) => bal > 0.01) // ignore tiny floating point errors
+        .sort((a, b) => b[1] - a[1]);
+        
+    if (personsWithBalance.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="2" style="text-align: center; color: var(--text-secondary);">No outstanding balances.</td></tr>';
+        return;
+    }
+    
+    personsWithBalance.forEach(([person, bal]) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td><strong>${person}</strong></td>
+            <td style="color: var(--danger); font-weight: 700;">${bal.toFixed(2)}</td>
+        `;
+        tbody.appendChild(tr);
+    });
 }

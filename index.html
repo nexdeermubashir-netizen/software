@@ -16,10 +16,13 @@
     <div class="app-container no-print">
         <main class="main-content">
             <div class="top-actions">
-                <a href="StockMaster_App.zip" download class="theme-btn" style="text-decoration: none;"
+                <a href="#" id="btn-download-app" class="theme-btn" style="text-decoration: none;"
                     aria-label="Download App" title="Download App">
                     <i class='bx bx-download'></i>
                 </a>
+                <button id="payment-modal-btn" class="theme-btn" style="text-decoration: none;" aria-label="Add Payment" title="Add Payment">
+                    <i class='bx bx-money'></i>
+                </button>
 
                 <h2 class="brand-title">
                     Abdul Samad Quraishi
@@ -53,16 +56,20 @@
                                             <option value="out" data-i18n="opt_out">Stock Out (Sale)</option>
                                         </select>
                                     </div>
-                                    <div class="form-group">
+                                    <div class="form-group" style="flex: 1 1 100%;">
                                         <label for="person-name" data-i18n="label_person">Person Name</label>
                                         <input type="text" id="person-name" list="person-name-list" required
                                             placeholder="Enter or select a person..."
                                             data-i18n-placeholder="placeholder_person" autocomplete="off">
                                         <datalist id="person-name-list"></datalist>
                                     </div>
+                                </div>
+
+                                <div class="form-section-title" data-i18n="sec_add_item" style="margin-top: 8px;">Add Item</div>
+                                <div class="form-row">
                                     <div class="form-group">
                                         <label for="stock-item" data-i18n="label_item">Item</label>
-                                        <input type="text" id="stock-item" list="stock-item-list" required
+                                        <input type="text" id="stock-item" list="stock-item-list" 
                                             placeholder="Select or type an item..."
                                             data-i18n-placeholder="opt_select_item" autocomplete="off">
                                         <datalist id="stock-item-list"></datalist>
@@ -73,8 +80,29 @@
                                             <small id="current-stock-unit" class="unit">(Kg)</small>
                                         </div>
                                     </div>
-                                </div>
 
+                                    <div class="form-group">
+                                        <label for="transaction-qty" data-i18n="label_qty">Quantity</label>
+                                        <input type="text" inputmode="decimal" id="transaction-qty" value="0">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="transaction-unit" data-i18n="label_unit">Unit</label>
+                                        <select id="transaction-unit">
+                                            <option value="kg" selected data-i18n="opt_kg">Kg</option>
+                                            <option value="mun" data-i18n="opt_mun">Mun (40kg = 1 Mun)</option>
+                                            <option value="gram" data-i18n="opt_gram">Grams</option>
+                                            <option value="ltr" data-i18n="opt_ltr">Liters</option>
+                                            <option value="ml" data-i18n="opt_ml">Milliliters</option>
+                                            <option value="amount" data-i18n="opt_amount">Pcs</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="rate-per-kg"><span data-i18n="label_rate_base">Rate</span> <span
+                                                id="rate-unit-suffix">(Per Kg)</span></label>
+                                        <input type="text" inputmode="decimal" id="rate-per-kg">
+                                    </div>
+                                </div>
+                                
                                 <div class="item-summary mt-2"
                                     style="margin-bottom: 24px; padding: 16px; background: rgba(0,0,0,0.05); border-radius: 12px; border: 1px dashed var(--border);">
                                     <h2 data-i18n="dash_item_summary" style="font-size: 1.1rem; margin-bottom: 12px;">
@@ -95,37 +123,47 @@
                                     </div>
                                 </div>
 
-                                <div class="form-section-title" data-i18n="sec_measurement">Measurement Record</div>
-                                <div class="form-row">
-                                    <div class="form-group">
-                                        <label for="transaction-qty" data-i18n="label_qty">Quantity</label>
-                                        <input type="text" inputmode="decimal" id="transaction-qty" value="0" required>
+                                <div class="form-actions" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid var(--border); flex-wrap: wrap; gap: 16px;">
+                                    <div style="display: flex; gap: 24px; align-items: center; flex-wrap: wrap;">
+                                        <div class="calc-result" style="margin: 0;">
+                                            <span data-i18n="calc_item_total">Item Total:</span> <span id="item-total-amount" style="font-size: 1.2rem;">0.00</span>
+                                            <div style="font-size: 12px; opacity: 0.7; margin-top: 4px;">Total Weight: <span id="calc-total-kg">0.00</span> <span id="calc-unit-suffix">(Kg)</span></div>
+                                        </div>
+                                        <div class="form-group" style="margin: 0; min-width: 150px;">
+                                            <label for="freight-charges" style="font-size: 12px; margin-bottom: 4px;" data-i18n="label_freight">Freight Charges</label>
+                                            <input type="text" inputmode="decimal" id="freight-charges" value="0" style="padding: 8px 12px; font-size: 14px;">
+                                        </div>
                                     </div>
-                                    <div class="form-group">
-                                        <label for="transaction-unit" data-i18n="label_unit">Unit</label>
-                                        <select id="transaction-unit" required>
-                                            <option value="kg" selected data-i18n="opt_kg">Kg</option>
-                                            <option value="mun" data-i18n="opt_mun">Mun (40kg = 1 Mun)</option>
-                                            <option value="gram" data-i18n="opt_gram">Grams</option>
-                                            <option value="ltr" data-i18n="opt_ltr">Liters</option>
-                                            <option value="ml" data-i18n="opt_ml">Milliliters</option>
-                                            <option value="amount" data-i18n="opt_amount">Pcs</option>
-                                        </select>
-                                    </div>
+                                    <button type="button" id="btn-add-to-cart" class="btn btn-secondary" style="background: rgba(139, 92, 246, 0.1); border: 1px dashed var(--accent); color: var(--accent); white-space: nowrap;">
+                                        <i class='bx bx-plus-circle'></i> <span data-i18n="btn_add_to_list">Add to List</span>
+                                    </button>
                                 </div>
-                                <div class="calc-result"><span data-i18n="calc_total">Total Quantity:</span> <span
-                                        id="calc-total-kg">0.00</span> <span id="calc-unit-suffix">(Kg)</span></div>
 
-                                <div class="form-section-title" data-i18n="sec_financials">Financials</div>
+                                <div class="form-section-title" data-i18n="sec_cart">Invoice Items</div>
+                                <div class="table-container" style="margin-bottom: 24px; border: 1px solid var(--border); border-radius: 12px; background: rgba(0,0,0,0.1);">
+                                    <table id="cart-table">
+                                        <thead>
+                                            <tr>
+                                                <th data-i18n="th_item">Item</th>
+                                                <th data-i18n="th_qty">Qty</th>
+                                                <th data-i18n="th_rate">Rate</th>
+                                                <th data-i18n="th_total">Total</th>
+                                                <th data-i18n="th_actions">Act</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr id="cart-empty-row">
+                                                <td colspan="5" style="text-align: center; padding: 24px; color: var(--text-secondary);" data-i18n="msg_empty_cart">No items added yet. Add items above.</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                <div class="form-section-title" data-i18n="sec_financials">Checkout</div>
                                 <div class="form-row">
-                                    <div class="form-group">
-                                        <label for="rate-per-kg"><span data-i18n="label_rate_base">Rate</span> <span
-                                                id="rate-unit-suffix">(Per Kg)</span></label>
-                                        <input type="text" inputmode="decimal" id="rate-per-kg" required>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="total-amount" data-i18n="label_total_amt">Total Amount</label>
-                                        <input type="number" id="total-amount" readonly class="readonly-input">
+                                    <div class="form-group" style="flex: 1 1 100%;">
+                                        <label for="total-amount" data-i18n="label_grand_total">Grand Total Amount</label>
+                                        <input type="number" id="total-amount" readonly class="readonly-input" style="font-size: 1.5rem; color: var(--accent); font-weight: bold; background: rgba(139, 92, 246, 0.05);">
                                     </div>
                                 </div>
                                 <div class="form-row">
@@ -152,6 +190,51 @@
                 </div>
             </div>
         </main>
+    </div>
+
+    <!-- Payment Modal -->
+    <div id="payment-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <h3 class="modal-title" data-i18n="modal_payment_title">Add Payment</h3>
+            <form id="payment-form">
+                <div class="form-group" style="margin-bottom: 16px;">
+                    <label for="payment-person" data-i18n="label_person">Person Name</label>
+                    <input type="text" id="payment-person" class="modal-input" list="payment-person-list" required
+                        placeholder="Enter or select a person..." style="margin-bottom: 8px;" autocomplete="off">
+                    <datalist id="payment-person-list"></datalist>
+                </div>
+                <div id="payment-person-history" style="display: none; margin-bottom: 16px; max-height: 150px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; background: var(--bg-main); padding: 8px;">
+                    <table style="width: 100%; font-size: 0.85rem; text-align: left; border-collapse: collapse;">
+                        <thead>
+                            <tr style="border-bottom: 1px solid var(--border); color: var(--text-secondary);">
+                                <th style="padding: 4px;" data-i18n="th_date">Date</th>
+                                <th style="padding: 4px;" data-i18n="th_item">Item(s)</th>
+                                <th style="padding: 4px;" data-i18n="th_total_amt">Total</th>
+                                <th style="padding: 4px;" data-i18n="label_paid">Paid</th>
+                            </tr>
+                        </thead>
+                        <tbody id="payment-history-tbody">
+                        </tbody>
+                    </table>
+                </div>
+                <div class="form-group" style="margin-bottom: 16px;">
+                    <label data-i18n="label_current_bal">Current Balance</label>
+                    <input type="number" id="payment-total-remaining" class="modal-input readonly-input alert-text" readonly style="margin-bottom: 8px;">
+                </div>
+                <div class="form-group" style="margin-bottom: 16px;">
+                    <label for="payment-amount" data-i18n="label_paid">Amount Paid</label>
+                    <input type="number" id="payment-amount" class="modal-input" style="margin-bottom: 8px;" min="0" step="any" placeholder="0">
+                </div>
+                <div class="form-group" style="margin-bottom: 24px;">
+                    <label data-i18n="label_new_rem_bal">New Remaining Balance</label>
+                    <input type="number" id="payment-new-remaining" class="modal-input" required style="margin-bottom: 8px;" step="any" placeholder="0">
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="modal-btn cancel" id="cancel-payment-btn" data-i18n="btn_cancel">Cancel</button>
+                    <button type="submit" class="modal-btn confirm" data-i18n="btn_save">Save</button>
+                </div>
+            </form>
+        </div>
     </div>
 
     <script src="translations.js"></script>

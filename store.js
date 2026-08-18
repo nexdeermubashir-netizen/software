@@ -104,6 +104,18 @@ class Store {
         return tx;
     }
 
+    static updateTransaction(id, updatedTx) {
+        let txs = this.getTransactions();
+        const index = txs.findIndex(tx => tx.id === id);
+        if (index !== -1) {
+            // Preserve the original date and ID, update the rest
+            updatedTx.id = id;
+            updatedTx.date = txs[index].date;
+            txs[index] = updatedTx;
+            this.saveTransactions(txs);
+        }
+    }
+
     static deleteTransaction(id) {
         let txs = this.getTransactions();
         txs = txs.filter(tx => tx.id !== id);

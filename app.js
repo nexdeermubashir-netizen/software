@@ -165,6 +165,236 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Initialize Dashboard
     updateDashboard();
+
+    // Payment Modal Logic
+    const paymentModalBtn = document.getElementById('payment-modal-btn');
+    const paymentModal = document.getElementById('payment-modal');
+    const cancelPaymentBtn = document.getElementById('cancel-payment-btn');
+    const paymentForm = document.getElementById('payment-form');
+    const paymentPersonInput = document.getElementById('payment-person');
+    const paymentTotalRemaining = document.getElementById('payment-total-remaining');
+    const paymentAmount = document.getElementById('payment-amount');
+    const paymentNewRemaining = document.getElementById('payment-new-remaining');
+    const btnDownloadApp = document.getElementById('btn-download-app');
+
+    if (btnDownloadApp) {
+        btnDownloadApp.addEventListener('click', (e) => {
+            e.preventDefault();
+            let currentPath = window.location.pathname;
+            if (currentPath.startsWith('/')) {
+                currentPath = currentPath.substring(1);
+            }
+            // Replace forward slashes with backslashes for Windows path
+            currentPath = currentPath.replace(/\//g, '\\');
+            
+            const batContent = `@echo off
+echo Creating StockMaster Desktop Shortcut...
+set "URI_PATH=${currentPath}"
+set "URI_PATH=%URI_PATH:\\=/%"
+set "PS_SCRIPT=%TEMP%\\create_shortcut.ps1"
+echo $WshShell = New-Object -comObject WScript.Shell > "%PS_SCRIPT%"
+echo $Shortcut = $WshShell.CreateShortcut("$env:USERPROFILE\\Desktop\\StockMaster.lnk") >> "%PS_SCRIPT%"
+echo $Shortcut.TargetPath = "msedge.exe" >> "%PS_SCRIPT%"
+echo $Shortcut.Arguments = "--app=""file:///%URI_PATH%""" >> "%PS_SCRIPT%"
+echo $Shortcut.Save() >> "%PS_SCRIPT%"
+
+powershell -ExecutionPolicy Bypass -NoProfile -File "%PS_SCRIPT%"
+del "%PS_SCRIPT%"
+
+echo Desktop icon created successfully on your Desktop!
+pause
+`;
+            const blob = new Blob([batContent], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'Create_StockMaster_Shortcut.bat';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        });
+    }
+    
+    window.populatePaymentPersonSelect = function() {
+        const persons = window.Store.getPersons();
+        const dataList = document.getElementById('payment-person-list');
+        if (!dataList) return;
+        
+        dataList.innerHTML = '';
+        persons.forEach((person, index) => {
+            const option = document.createElement('option');
+            option.value = `${index + 1} - ${person.name}`;
+            dataList.appendChild(option);
+        });
+    };
+
+    if (paymentModalBtn) {
+        paymentModalBtn.addEventListener('click', () => {
+            window.populatePaymentPersonSelect();
+            paymentForm.reset();
+            paymentTotalRemaining.value = '';
+            paymentAmount.value = '';
+            paymentNewRemaining.value = '';
+            
+            const historyContainer = document.getElementById('payment-person-history');
+            if (historyContainer) historyContainer.style.display = 'none';
+            
+            paymentModal.style.display = 'flex';
+        });
+    }
+
+    if (cancelPaymentBtn) {
+        cancelPaymentBtn.addEventListener('click', () => {
+            paymentModal.style.display = 'none';
+        });
+    }
+
+    function calculatePaymentBalances() {
+        const personInputValue = paymentPersonInput.value.trim();
+        let personName = personInputValue;
+        const persons = window.Store.getPersons();
+        
+        if (personInputValue) {
+            const matchNumOnly = personInputValue.match(/^(\d+)$/);
+            const matchWithDash = personInputValue.match(/^(\d+)\s*-\s*(.+)/);
+            
+            if (matchNumOnly) {
+                const index = parseInt(matchNumOnly[1]) - 1;
+                if (persons[index]) personName = persons[index].name;
+            } else if (matchWithDash) {
+                const index = parseInt(matchWithDash[1]) - 1;
+                if (persons[index]) {
+                    personName = persons[index].name;
+                } else {
+                    personName = matchWithDash[2].trim();
+                }
+            }
+        }
+
+        // Calculate total remaining and build history table
+        const transactions = window.Store.getTransactions();
+        let totalRemaining = 0;
+        
+        const historyContainer = document.getElementById('payment-person-history');
+        const historyTbody = document.getElementById('payment-history-tbody');
+        if (historyTbody) historyTbody.innerHTML = '';
+        
+        let hasHistory = false;
+
+        if (personName) {
+            // Sort transactions by date descending for the history view
+            const personTx = transactions.filter(tx => tx.person === personName).sort((a, b) => new Date(b.date) - new Date(a.date));
+            
+            personTx.forEach(tx => {
+                const totalAmt = parseFloat(tx.totalAmount) || 0;
+                const paidAmt = parseFloat(tx.paidAmount) || 0;
+                totalRemaining += (totalAmt - paidAmt);
+                
+                if (historyTbody) {
+                    hasHistory = true;
+                    const dateObj = new Date(tx.date);
+                    const dateStr = dateObj.toLocaleDateString();
+                    
+                    const tr = document.createElement('tr');
+                    tr.style.borderBottom = '1px solid var(--border)';
+                    tr.innerHTML = `
+                        <td style="padding: 6px 4px;">${dateStr}</td>
+                        <td style="padding: 6px 4px;">${tx.itemName || 'Payment'}</td>
+                        <td style="padding: 6px 4px;">${totalAmt.toFixed(2)}</td>
+                        <td style="padding: 6px 4px;">${paidAmt.toFixed(2)}</td>
+                    `;
+                    historyTbody.appendChild(tr);
+                }
+            });
+        }
+        
+        if (historyContainer) {
+            historyContainer.style.display = hasHistory ? 'block' : 'none';
+        }
+        
+        paymentTotalRemaining.value = totalRemaining.toFixed(2);
+        
+        const paid = parseFloat(paymentAmount.value) || 0;
+        const newRemaining = totalRemaining - paid;
+        paymentNewRemaining.value = newRemaining.toFixed(2);
+    }
+
+    if (paymentPersonInput) {
+        paymentPersonInput.addEventListener('input', calculatePaymentBalances);
+        paymentPersonInput.addEventListener('change', calculatePaymentBalances);
+    }
+
+    if (paymentAmount) {
+        paymentAmount.addEventListener('input', calculatePaymentBalances);
+    }
+
+    if (paymentForm) {
+        paymentForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            const personInputValue = paymentPersonInput.value.trim();
+            let personName = personInputValue;
+            const persons = window.Store.getPersons();
+            
+            if (personInputValue) {
+                const matchNumOnly = personInputValue.match(/^(\d+)$/);
+                const matchWithDash = personInputValue.match(/^(\d+)\s*-\s*(.+)/);
+                
+                if (matchNumOnly) {
+                    const index = parseInt(matchNumOnly[1]) - 1;
+                    if (persons[index]) personName = persons[index].name;
+                } else if (matchWithDash) {
+                    const index = parseInt(matchWithDash[1]) - 1;
+                    if (persons[index]) {
+                        personName = persons[index].name;
+                    } else {
+                        personName = matchWithDash[2].trim();
+                    }
+                }
+            }
+
+            if (!personName) {
+                alert("Please enter a person name.");
+                return;
+            }
+
+            // Add person if new
+            window.Store.addPerson(personName);
+            if (window.populatePersonSelect) window.populatePersonSelect();
+            window.populatePaymentPersonSelect();
+
+            const paid = parseFloat(paymentAmount.value) || 0;
+            const newRemaining = parseFloat(paymentNewRemaining.value) || 0;
+            const currentBalance = parseFloat(paymentTotalRemaining.value) || 0;
+            
+            // Calculate the adjustment needed to reach the desired new remaining balance
+            const adjustment = newRemaining - currentBalance + paid;
+
+            const tx = {
+                type: 'payment',
+                person: personName,
+                itemId: null,
+                itemName: 'Ledger Adjustment / Payment',
+                unit: '-',
+                weight: { mun: 0, kg: 0, grams: 0, ltr: 0, ml: 0 },
+                totalKg: 0,
+                ratePerKg: 0,
+                totalAmount: adjustment,
+                paidAmount: paid,
+                remainingAmount: newRemaining
+            };
+
+            window.Store.addTransaction(tx);
+            
+            alert('Payment saved successfully!');
+            paymentModal.style.display = 'none';
+            updateDashboard();
+            if (typeof renderInvoicesTable === 'function') {
+                renderInvoicesTable();
+            }
+        });
+    }
 });
 
 // Dashboard Logic
@@ -181,18 +411,21 @@ function updateDashboard() {
             let matchPerson = true;
 
             if (itemQuery) {
-                const itemObj = items.find(i => i.id === tx.itemId);
-                const itemIndex = items.findIndex(i => i.id === tx.itemId);
-                const idStr = String(itemIndex + 1);
-                const nameLower = itemObj ? itemObj.name.toLowerCase() : (tx.itemName || '').toLowerCase();
-                const searchStr = itemObj ? `${idStr} - ${itemObj.name}`.toLowerCase() : (tx.itemName || '').toLowerCase();
-                
-                const isNum = /^\d+$/.test(itemQuery);
-                if (isNum) {
-                    matchItem = (idStr === itemQuery || nameLower.includes(itemQuery));
-                } else {
-                    matchItem = searchStr.includes(itemQuery);
-                }
+                const txItems = tx.items || [tx];
+                matchItem = txItems.some(txi => {
+                    const itemObj = items.find(i => i.id === txi.itemId);
+                    const itemIndex = items.findIndex(i => i.id === txi.itemId);
+                    const idStr = String(itemIndex + 1);
+                    const nameLower = itemObj ? itemObj.name.toLowerCase() : (txi.itemName || '').toLowerCase();
+                    const searchStr = itemObj ? `${idStr} - ${itemObj.name}`.toLowerCase() : (txi.itemName || '').toLowerCase();
+                    
+                    const isNum = /^\d+$/.test(itemQuery);
+                    if (isNum) {
+                        return (idStr === itemQuery || nameLower.includes(itemQuery));
+                    } else {
+                        return searchStr.includes(itemQuery);
+                    }
+                });
             }
 
             if (personQuery) {
@@ -216,11 +449,13 @@ function updateDashboard() {
 
     transactions.forEach(tx => {
         if (tx.type === 'in') {
-            totalIn += parseFloat(tx.totalKg);
+            totalIn += parseFloat(tx.totalKg) || 0;
         } else if (tx.type === 'out') {
-            totalOut += parseFloat(tx.totalKg);
+            totalOut += parseFloat(tx.totalKg) || 0;
         }
-        totalRemaining += parseFloat(tx.remainingAmount);
+        const tAmt = parseFloat(tx.totalAmount) || 0;
+        const pAmt = parseFloat(tx.paidAmount) || 0;
+        totalRemaining += (tAmt - pAmt);
     });
 
     const statIn = document.getElementById('stat-total-in');
@@ -376,13 +611,16 @@ function renderItemSummary(items, transactions, itemQuery, personQuery) {
     });
 
     transactions.forEach(tx => {
-        if (itemTotals[tx.itemId]) {
-            if (tx.type === 'in') {
-                itemTotals[tx.itemId].in += parseFloat(tx.totalKg) || 0;
-            } else if (tx.type === 'out') {
-                itemTotals[tx.itemId].out += parseFloat(tx.totalKg) || 0;
+        const txItems = tx.items || [tx];
+        txItems.forEach(txi => {
+            if (itemTotals[txi.itemId]) {
+                if (tx.type === 'in') {
+                    itemTotals[txi.itemId].in += parseFloat(txi.totalKg) || 0;
+                } else if (tx.type === 'out') {
+                    itemTotals[txi.itemId].out += parseFloat(txi.totalKg) || 0;
+                }
             }
-        }
+        });
     });
 
     let renderedCount = 0;
